@@ -24,7 +24,7 @@
 #define PrintText_BleAndSerialFail -3
 #define PrintText_NA 0
 #define PrintText_Success 1
-#define LoggerDebugLevel 2
+#define LoggerDebugLevel 3
 #define LoggerDebugLevelDefault 1
 #define LoggerDebugLevel_Error 4
 #define LoggerDebugLevel_Warning 3

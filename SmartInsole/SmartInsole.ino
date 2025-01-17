@@ -6,24 +6,27 @@
 // Setup function: runs once when the program starts
 void setup() {
   Serial.begin(115200);
-  Serial.println("Setup");
+  PrintText(LoggerDebugLevel_Debug,"Setup");
   // Initialize Logger
   SetupLogger();
-  Serial.println("SetupLogger Done.");
+  PrintText(LoggerDebugLevel_Debug,"SetupLogger Done.");
   // Initialize Pressure Sensor ADC
   ADCSetup();
-  Serial.println("ADCSetup Done.");
+  PrintText(LoggerDebugLevel_Debug,"ADCSetup Done.");
   // Initialize Accelerometer Module
   AccelerometerSetup();
-  Serial.println("AccelerometerSetup Done.");
+  PrintText(LoggerDebugLevel_Debug,"AccelerometerSetup Done.");
   //testFunctions();
 }
 
 void testFunctions()
 {
-  Serial.println("Starting Tests....");
-  Serial.println("Starting testPressureSensorModule......");
+  PrintText(LoggerDebugLevel_Debug,"Starting Tests....");
+
+  PrintText(LoggerDebugLevel_Debug, "Starting testPressureSensorModule......");
   testPressureSensorModule();
+
+  PrintText(LoggerDebugLevel_Debug, "Starting TestAccelerometerModule......");
   TestAccelerometerModule();
 
 }
@@ -48,7 +51,7 @@ void loop() {
 
 
   // Read Accelerometer values
-  if (!AccelerometerRead()) {
+  if (AccelerometerRead()) {
     PrintText(LoggerDebugLevel_Error, "Accelerometer read failed!");
     //return;  // Skip the rest of the loop if Accelerometer read fails
   }

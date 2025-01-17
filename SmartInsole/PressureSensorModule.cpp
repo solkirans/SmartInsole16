@@ -1,5 +1,5 @@
 #include "PressureSensorModule.h"
-
+#include "Logger.h"
 // Define variables here (allocated once)
 const uint8_t ADS1115_Address[ADS1115_Count] = { 0x48, 0x49, 0x4A, 0x4B };
 uint16_t PressureSensorValues[ADS1115_TotalChannel_Count] = { 0 };
@@ -20,6 +20,7 @@ bool ADCSetup() {
       ADS1115_Status[i] = ADS1115_Status_Ok;
     } else {
       ADS1115_Status[i] = ADS1115_Status_InitFail;
+      PrintText(LoggerDebugLevel_Error, "ADS1115 Setup Return: ADS1115_Status_InitFail");
       allOk = false;
     }
   }
@@ -40,6 +41,7 @@ bool ADCRead() {
       int16_t value = ads[i].readADC_SingleEnded(channel);  // Get the ADC result
       if (value == -1) {                                  // Check for read error
         ADS1115_Status[i] = ADS1115_Status_ReadFail;
+        PrintText(LoggerDebugLevel_Error, "ADS1115 Read Return: ADS1115_Status_ReadFail");
         allOk = false;
       } else {
         PressureSensorValues[i * ADS1115_Channel_Count + channel] = value;
@@ -53,22 +55,22 @@ bool ADCRead() {
 
 void testPressureSensorModule() {
   if (!ADCSetup()) {
-    Serial.println("ADC Setup failed");
+    PrintText(LoggerDebugLevel_Error, "ADC Setup failed");
     return;
   }
 
   for (int i = 0; i < 100; i++) {
     if (!ADCRead()) {
-      Serial.println("ADC Read failed");
+      PrintText(LoggerDebugLevel_Error, "ADC Read failed");
     } else {
       String msg = "Val:";
       for (int j=0; j<ADS1115_TotalChannel_Count; j++)
       {
         msg += String(PressureSensorValues[j])+","; 
       }
-      Serial.println(msg);
+      PrintText(LoggerDebugLevel_Debug, msg);
     }
   }
 
-  Serial.println("Test completed successfully!");
+  PrintText(LoggerDebugLevel_Debug, "Test completed successfully!");
 }
