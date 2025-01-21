@@ -38,6 +38,7 @@ void SensorTask(void* pvParam)
 // 2) Communication Task
 void CommunicationTask(void* pvParam)
 {
+    void BLE_Watchdog(bool FlagSide);
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(DEFAULT_LOOP_INTERVAL_MS);
 
