@@ -9,7 +9,7 @@
 #include "ErrorCodes.h"
 
 // Globals
-static bool g_sideFlag = 1;  // 0 => left, 1 => right
+static bool g_sideFlag = 0;  // 0 => left, 1 => right
 static unsigned long s_lastTaskTime = 0; // for watchdog
 // 1) Sensor Task
 void SensorTask(void* pvParam)
@@ -98,7 +98,7 @@ void setup()
 
     // 2. Create logger task
     xTaskCreate(LoggerTask, "LoggerTask", 4096, NULL, 1, NULL);
-
+    
     // 3. Initialize I2C
     Wire.begin(I2C_SDA_Pin, I2C_SCL_Pin, 400000); // 400 kHz
 
@@ -118,7 +118,7 @@ void setup()
     if (Acc_Init() != ERR_OK) {
         Serial.println("Accel init failed, continuing anyway...");
     }
-   
+
     // 7. Init BLE (sideFlag => false => left, true => right)
     BLE_Init(g_sideFlag);
 
