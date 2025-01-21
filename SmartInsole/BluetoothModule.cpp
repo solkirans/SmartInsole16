@@ -24,21 +24,45 @@ static BLEAdvertising*    pAdvertising     = nullptr;
 // Track connection state
 static bool bleConnected = false;
 
+
+// Add at the top with other globals
+static unsigned long lastSuccessfulOperation = 0;
+static const unsigned long BLE_WATCHDOG_TIMEOUT = 5000; // 5 seconds
+
+// Add this function to your code
+void BLE_Watchdog(bool FlagSide) {
+    if (millis() - lastSuccessfulOperation > BLE_WATCHDOG_TIMEOUT) {
+        LOG_INFO("BLE watchdog triggered - restarting BLE");
+        BLEDevice::deinit(true);
+        delay(1000);
+        BLE_Init(sideFlag);
+        lastSuccessfulOperation = millis();
+    }
+}
 // -----------------------------------------------------------------------------
 // BLE Callbacks to monitor connections
 // -----------------------------------------------------------------------------
+// Modify MyServerCallbacks to include reconnection logic
 class MyServerCallbacks : public BLEServerCallbacks {
-  void onConnect(BLEServer* pServer) override {
-    bleConnected = true;
-    LOG_INFO("BLE device connected");
-  }
+    void onConnect(BLEServer* pServer) override {
+        bleConnected = true;
+        LOG_INFO("BLE device connected");
+        // Stop advertising when connected
+        pAdvertising->stop();
+    }
 
-  void onDisconnect(BLEServer* pServer) override {
-    bleConnected = false;
-    LOG_INFO("BLE device disconnected");
-    // Resume advertising so another device can connect
-    pAdvertising->start();
-  }
+    void onDisconnect(BLEServer* pServer) override {
+        bleConnected = false;
+        LOG_INFO("BLE device disconnected");
+        
+        // Reset the characteristic for the next connection
+        pTxCharacteristic->clearSubscribe();
+        
+        // Restart advertising with a small delay
+        vTaskDelay(pdMS_TO_TICKS(100));  // 100ms delay
+        pAdvertising->start();
+        LOG_INFO("Advertising restarted");
+    }
 };
 
 // -----------------------------------------------------------------------------
@@ -54,6 +78,9 @@ bool BLE_Init(bool FlagSide)
 
     // 2. Initialize BLE
     BLEDevice::init(deviceName);
+
+    // Increase TX power for better range
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
 
     // Optionally increase MTU to improve throughput
     // (Phones often negotiate down, but let's request a bigger MTU)
@@ -79,8 +106,25 @@ bool BLE_Init(bool FlagSide)
 
     // 7. Start advertising
     pAdvertising = BLEDevice::getAdvertising();
-    // Advertise our service UUID
-    pAdvertising->addServiceUUID(serviceUUID);
+    // Set advertising parameters
+    esp_ble_gap_set_ext_adv_params_all_phys(); // Enable extended advertising
+    // Configure advertising data
+    BLEAdvertisementData advData;
+    advData.setName(deviceName);
+    advData.setCompleteServices(BLEUUID(serviceUUID));
+    advData.setFlags(0x06); // BR/EDR not supported + LE General Discoverable Mode
+    // Configure scan response data
+    BLEAdvertisementData scanResponse;
+    scanResponse.setName(deviceName); // Include name in scan response too
+    scanResponse.setManufacturerData("CorAlign"); // Optional: Add manufacturer data
+    // Set the advertising data and scan response
+    pAdvertising->setAdvertisementData(advData);
+    pAdvertising->setScanResponseData(scanResponse);
+    // Configure advertising parameters
+    pAdvertising->setMinInterval(ADVERTISING_INTERVAL_MIN);
+    pAdvertising->setMaxInterval(ADVERTISING_INTERVAL_MAX);
+    pAdvertising->setMinPreferred(0x06);  // 0x06 = 7.5ms connection interval min
+    pAdvertising->setMaxPreferred(0x12);  // 0x12 = 22.5ms connection interval max
     pAdvertising->start();
 
     bleConnected = false;  // reset connection state
