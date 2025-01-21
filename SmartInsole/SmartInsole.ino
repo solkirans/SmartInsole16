@@ -9,7 +9,7 @@
 #include "ErrorCodes.h"
 
 // Globals
-static bool g_sideFlag = true;  // 0 => left, 1 => right
+static bool g_sideFlag = 0;  // 0 => left, 1 => right
 static unsigned long s_lastTaskTime = 0; // for watchdog
 // 1) Sensor Task
 void SensorTask(void* pvParam)
@@ -18,7 +18,7 @@ void SensorTask(void* pvParam)
     const TickType_t xFrequency = pdMS_TO_TICKS(DEFAULT_LOOP_INTERVAL_MS);
 
     for(;;) {
-        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+        //vTaskDelayUntil(&xLastWakeTime, xFrequency);
 
         // Watchdog check
         unsigned long now = millis();
@@ -28,7 +28,9 @@ void SensorTask(void* pvParam)
         }
         s_lastTaskTime = now;
           // Read sensors
-
+        Battery_Read();
+        Acc_Read();
+        Pressure_Read();
 
     }
 }
@@ -42,10 +44,8 @@ void CommunicationTask(void* pvParam)
     static uint32_t loopCount = 0;
 
     for(;;) {
-        Battery_Read();
-        Acc_Read();
-        Pressure_Read();
-        vTaskDelayUntil(&xLastWakeTime, xFrequency);
+
+        //vTaskDelayUntil(&xLastWakeTime, xFrequency);
         // Build 39-byte payload:
         //   [0]   = BatteryVoltage (1 byte)
         //   [1..6] = Acc_Array (3× int16 => 6 bytes)
@@ -72,7 +72,7 @@ void CommunicationTask(void* pvParam)
 
         // Send via BLE
         BLE_SendByteArray(msg);
-
+        vTaskDelay(1); // give BLE stack a moment to send
 
         // Optionally print info if serial is enabled
         loopCount++;
@@ -117,7 +117,7 @@ void setup()
     if (Acc_Init() != ERR_OK) {
         Serial.println("Accel init failed, continuing anyway...");
     }
-
+    
     // 7. Init BLE (sideFlag => false => left, true => right)
     BLE_Init(g_sideFlag);
 

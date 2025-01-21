@@ -20,6 +20,7 @@ uint8_t Acc_Init(void)
     // Set data rate ~ 400 Hz if possible
     // library may not let you pick exactly 400, but you can approximate
     accel.setRange(ADXL345_RANGE_16_G);
+    accel.setDataRate(ADXL345_DATARATE_3200_HZ);
     Acc_Status = ACC_STATUS_OK;
     LOG_INFO("Acceleration module init OK");
     return ACC_ERR_OK;

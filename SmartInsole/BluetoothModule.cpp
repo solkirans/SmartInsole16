@@ -14,7 +14,7 @@
 
 // A 2D array for potential message queue storage (39 columns × 100 rows).
 // Even if you're sending immediately, you can keep this as a buffer if needed.
-static uint8_t MsgQueue[100][39];
+static uint8_t MsgQueue[100][BLE_MSG_LENGTH];
 
 // BLE objects
 static BLEServer*         pServer          = nullptr;
@@ -97,12 +97,11 @@ bool BLE_SendByteArray(uint8_t* msg)
         uint8_t* val = pDesc->getValue();
         if (val && val[0] == 1) {
           // OK to notify
-          pTxCharacteristic->setValue(msg, 39);
+          pTxCharacteristic->setValue(msg, BLE_MSG_LENGTH);
           pTxCharacteristic->notify();
         }
       }
     }
-    vTaskDelay(1); // give BLE stack a moment to send
     LOG_INFO("BLE_SendByteArray: 39 bytes sent");
     return true;
 }
@@ -116,8 +115,8 @@ void BLE_Test(void)
     }
 
     // Create a dummy 39-byte test message
-    uint8_t testMsg[39];
-    for (int i = 0; i < 39; i++) {
+    uint8_t testMsg[BLE_MSG_LENGTH];
+    for (int i = 0; i < BLE_MSG_LENGTH; i++) {
         testMsg[i] = i;
     }
 
