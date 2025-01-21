@@ -17,6 +17,9 @@ static const char* CHARACTERISTIC_UUID_RIGHT = "00000002-ABCD-1234-5678-01234567
 static const char* SERVICE_UUID_LEFT         = "00000003-ABCD-1234-5678-0123456789AB";
 static const char* CHARACTERISTIC_UUID_LEFT  = "00000004-ABCD-1234-5678-0123456789AB";
 
+
+// Constants
+#define BLE_MSG_LENGTH 39  // Define the message length
 // --------------------------------------------------------------
 // Functions
 // --------------------------------------------------------------
@@ -41,5 +44,4 @@ bool BLE_SendByteArray(uint8_t* msg);
  *        (using "Insole Right" as an example) and sends a 39-byte test message.
  */
 void BLE_Test(void);
-
 #endif // BLUETOOTH_MODULE_H

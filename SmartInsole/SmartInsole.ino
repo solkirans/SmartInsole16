@@ -9,7 +9,7 @@
 #include "ErrorCodes.h"
 
 // Globals
-static bool g_sideFlag = 0;  // 0 => left, 1 => right
+static bool g_sideFlag = 1;  // 0 => left, 1 => right
 static unsigned long s_lastTaskTime = 0; // for watchdog
 // 1) Sensor Task
 void SensorTask(void* pvParam)
@@ -28,6 +28,7 @@ void SensorTask(void* pvParam)
         }
         s_lastTaskTime = now;
           // Read sensors
+        
         Battery_Read();
         Acc_Read();
         Pressure_Read();
@@ -38,7 +39,6 @@ void SensorTask(void* pvParam)
 // 2) Communication Task
 void CommunicationTask(void* pvParam)
 {
-    void BLE_Watchdog(bool FlagSide);
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(DEFAULT_LOOP_INTERVAL_MS);
 
@@ -118,7 +118,7 @@ void setup()
     if (Acc_Init() != ERR_OK) {
         Serial.println("Accel init failed, continuing anyway...");
     }
-    
+   
     // 7. Init BLE (sideFlag => false => left, true => right)
     BLE_Init(g_sideFlag);
 
