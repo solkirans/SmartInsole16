@@ -23,5 +23,6 @@ extern BatteryStatus_t Battery_Status;
 uint8_t Battery_Init(void);
 uint8_t Battery_Read(void);
 void Battery_Test(void);
+void i2cScanner(void);
 
 #endif

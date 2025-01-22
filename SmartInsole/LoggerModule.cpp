@@ -1,8 +1,8 @@
 #include "LoggerModule.h"
 #include <stdarg.h>
 
-static const size_t LOG_QUEUE_SIZE  = 20;   // number of messages that can be queued
-static const size_t MAX_LOG_LENGTH  = 128;  // max length per log message
+static const size_t LOG_QUEUE_SIZE  = LOGGER_QUEUE_SIZE;   // number of messages that can be queued
+static const size_t MAX_LOG_LENGTH  = LOGGER_MAX_LOG_LENGTH;  // max length per log message
 
 static uint8_t s_logLevel      = LOG_LEVEL_ERROR;
 static bool    s_serialEnabled = false;
@@ -14,14 +14,12 @@ typedef struct {
 
 static QueueHandle_t s_loggerQueue = nullptr;
 
-void LoggerInit(uint8_t logLevel, bool serialEnable)
+void LoggerInit()
 {
-    s_logLevel = logLevel;
-    s_serialEnabled = serialEnable;
+    s_logLevel = LOG_LEVEL_SELECTED;
+    s_serialEnabled = LOG_SERIAL_ENABLED;
 
-    if (s_serialEnabled) {
-        Serial.begin(115200);
-    }
+    Serial.begin(115200);
     // Create the queue if not created
     if (!s_loggerQueue) {
         s_loggerQueue = xQueueCreate(LOG_QUEUE_SIZE, sizeof(LogItem_t));
@@ -31,7 +29,7 @@ void LoggerInit(uint8_t logLevel, bool serialEnable)
 void LoggerPrint(uint8_t level, const char* func, int line, const char* format, ...)
 {
     // If level is above current log level, skip
-    if (level > s_logLevel) {
+    if ((level > s_logLevel) || (!s_serialEnabled)) {
         return;
     }
 

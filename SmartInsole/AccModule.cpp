@@ -20,7 +20,11 @@ uint8_t Acc_Init(void)
     // Set data rate ~ 400 Hz if possible
     // library may not let you pick exactly 400, but you can approximate
     accel.setRange(ADXL345_RANGE_16_G);
+    LOG_DEBUG("accel.setRange complete.");
+
     accel.setDataRate(ADXL345_DATARATE_3200_HZ);
+    LOG_DEBUG("accel.setDataRate complete.");
+
     Acc_Status = ACC_STATUS_OK;
     LOG_INFO("Acceleration module init OK");
     return ACC_ERR_OK;
@@ -39,6 +43,8 @@ uint8_t Acc_Read(void)
     Acc_Array[0] = (int16_t)(event.acceleration.x * 10);
     Acc_Array[1] = (int16_t)(event.acceleration.y * 10);
     Acc_Array[2] = (int16_t)(event.acceleration.z * 10);
+
+    LOG_DEBUG("Acc test: x=%d, y=%d, z=%d", Acc_Array[0], Acc_Array[1], Acc_Array[2]);
 
     Acc_Status = ACC_STATUS_OK;
     return ACC_ERR_OK;

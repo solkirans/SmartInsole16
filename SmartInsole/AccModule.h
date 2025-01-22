@@ -4,6 +4,8 @@
 #include <Arduino.h>
 #include "ErrorCodes.h"
 
+// /////////////////////////////////////////////////////////////////
+// ''''''' ACCELERATION SENSOR  ''''''''''''''''''' //
 #define ACC_ERR_OK        ERR_OK
 #define ACC_ERR_INIT      ERR_SENSOR_INIT_FAIL
 #define ACC_ERR_READ      ERR_SENSOR_READ_FAIL

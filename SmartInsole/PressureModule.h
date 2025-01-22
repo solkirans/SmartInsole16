@@ -24,4 +24,5 @@ uint8_t Pressure_Read(void);
 // test
 void Pressure_Test(void);
 
+void Pressure_PrintValues(void);
 #endif // PRESSURE_MODULE_H

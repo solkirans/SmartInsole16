@@ -22,7 +22,11 @@ uint8_t Battery_Init(void)
 }
 
 uint8_t Battery_Read(void)
-{
+{ 
+    if (Battery_Status)
+    {
+      return Battery_Status;
+    }
     uint32_t now = millis();
     if ((now - s_lastReadTime) < BATT_READ_PERIOD_MS && s_lastReadTime != 0) {
         // skip reading if not enough time has passed
@@ -50,6 +54,7 @@ uint8_t Battery_Read(void)
         BatteryVoltage = (uint8_t)(ratio * 240.0f + 10.0f);
         Battery_Status = BATTERY_STATUS_OK;
     }
+    LOG_DEBUG("Battery test reading: %d", BatteryVoltage);
     return BATT_ERR_OK;
 }
 
@@ -67,4 +72,34 @@ void Battery_Test(void)
     }
     LOG_DEBUG("Battery test reading: %d", BatteryVoltage);
     LOG_INFO("Battery test done.");
+}
+
+void i2cScanner()
+{
+    // Print initial scanner message:
+    LOG_INFO("I2C Scanner: Scanning for devices...");
+
+    // Scan each possible 7-bit I2C address
+    for (uint8_t address = 1; address < 127; address++) {
+        Wire.beginTransmission(address);
+        uint8_t error = Wire.endTransmission();
+
+        if (error == 0) {
+            // Device at this address responded
+            char tmpMsg[64];
+            snprintf(tmpMsg, sizeof(tmpMsg), 
+                     "I2C device found at address 0x%02X!", address);
+            LOG_INFO("%s", tmpMsg);
+        } 
+        else if (error == 4) {
+            // "Other error" in Wire lib
+            char tmpMsg[64];
+            snprintf(tmpMsg, sizeof(tmpMsg),
+                     "Unknown error at address 0x%02X", address);
+            LOG_INFO("%s", tmpMsg);
+        }
+    }
+
+    // Print final message after the scan:
+    LOG_INFO("I2C scan complete.");
 }
