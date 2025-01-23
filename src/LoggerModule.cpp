@@ -4,9 +4,9 @@
 static const size_t LOG_QUEUE_SIZE  = LOGGER_QUEUE_SIZE;   // number of messages that can be queued
 static const size_t MAX_LOG_LENGTH  = LOGGER_MAX_LOG_LENGTH;  // max length per log message
 
-static uint8_t s_logLevel      = LOG_LEVEL_ERROR;
+static uint8_t s_logLevel      = LOGGER_LEVEL_ERROR;
 static bool    s_serialEnabled = false;
-
+static unsigned long lastPrintTime = 0;
 typedef struct {
     char msg[MAX_LOG_LENGTH];
     uint8_t level;
@@ -64,5 +64,23 @@ void LoggerTask(void* pvParams)
             }
             // If serial not enabled, we discard or could store logs in memory
         }
+    }
+}
+
+// Prints the sensor byte array if enough time has passed
+void LoggerPrintLoopMessage(uint8_t* msg) {
+    unsigned long currentTime = millis();
+    
+    // Check if enough time has passed since last print
+    if (currentTime - lastPrintTime >= PRINT_INTERVAL) {
+        lastPrintTime = currentTime;  // Update the last print time
+        
+        // Create debug string
+        String dbg;
+        for (int i = 0; i < BLE_MSG_LENGTH; i++) {
+            dbg += String(msg[i], HEX);
+            dbg += " ";
+        }
+        LOG_INFO("TxMsg: %s", dbg.c_str());
     }
 }

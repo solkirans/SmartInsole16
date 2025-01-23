@@ -9,10 +9,9 @@
 #include "ErrorCodes.h"
 
 // Globals
-static bool g_sideFlag = 0;  // 0 => left, 1 => right
+
 static unsigned long s_lastTaskTime = 0; // for watchdog
-bool FlagReadingDone = false;
-static unsigned long lastPrintTime = 0;
+
 static  uint8_t msg[BLE_MSG_LENGTH];
 
 // Function to pack sensor data into BLE message
@@ -43,23 +42,6 @@ void PackSensorData(uint8_t* msg) {
     }
 }
 
-// 0) Print function
-void printLoopMessage(uint8_t* msg) {
-    unsigned long currentTime = millis();
-    
-    // Check if enough time has passed since last print
-    if (currentTime - lastPrintTime >= PRINT_INTERVAL) {
-        lastPrintTime = currentTime;  // Update the last print time
-        
-        // Create debug string
-        String dbg;
-        for (int i = 0; i < BLE_MSG_LENGTH; i++) {
-            dbg += String(msg[i], HEX);
-            dbg += " ";
-        }
-        LOG_INFO("TxMsg: %s", dbg.c_str());
-    }
-}
 
 
 // 1) Sensor Task
@@ -79,11 +61,16 @@ void SensorTask(void* pvParam)
         }
         s_lastTaskTime = now;
           // Read sensors
-          Battery_Read();
-          Acc_Read();
-          Pressure_Read();
-        PackSensorData(msg);
-        printLoopMessage(msg);
+          if (!testDeviceBLE)
+          {
+            Battery_Read();
+            Acc_Read();
+            Pressure_Read();
+            PackSensorData(msg);
+        
+          }
+
+        LoggerPrintLoopMessage(msg);
 
     }
 }
@@ -122,30 +109,31 @@ void setup()
     Wire.begin(I2C_SDA_Pin, I2C_SCL_Pin, 400000); // 400 kHz
     LOG_DEBUG("Wire.begin complete.");
     i2cScanner();
+    if (!testDeviceBLE)
+    {
+      // 4. Init battery (MAX17048)
+      if (Battery_Init() != ERR_OK) {
+          // Print via serial because logger might not be fully up yet
+          LOG_ERROR("Battery init failed, continuing anyway...");
+      }
+      LOG_DEBUG("Battery_Init complete.");
 
-    // 4. Init battery (MAX17048)
-    if (Battery_Init() != ERR_OK) {
-        // Print via serial because logger might not be fully up yet
-        LOG_ERROR("Battery init failed, continuing anyway...");
+
+      // 5. Init pressure (ADS1115)
+      if (Pressure_Init() != ERR_OK) {
+          LOG_ERROR("Pressure init failed, halting!");
+          while(true) { vTaskDelay(portMAX_DELAY); }
+      }
+      LOG_DEBUG("Pressure_Init complete.");
+
+
+      // 6. Init acceleration (ADXL345)
+      if (Acc_Init() != ERR_OK) {
+          LOG_ERROR("Accel init failed, continuing anyway...");
+      }
+      LOG_DEBUG("Acc_Init complete.");
+
     }
-    LOG_DEBUG("Battery_Init complete.");
-
-
-    // 5. Init pressure (ADS1115)
-    if (Pressure_Init() != ERR_OK) {
-        LOG_ERROR("Pressure init failed, halting!");
-        while(true) { vTaskDelay(portMAX_DELAY); }
-    }
-    LOG_DEBUG("Pressure_Init complete.");
-
-
-    // 6. Init acceleration (ADXL345)
-    if (Acc_Init() != ERR_OK) {
-        LOG_ERROR("Accel init failed, continuing anyway...");
-    }
-    LOG_DEBUG("Acc_Init complete.");
-
-
     // 7. Init BLE (sideFlag => false => left, true => right)
     BLE_Init(g_sideFlag);
     LOG_DEBUG("BLE_Init complete.");
