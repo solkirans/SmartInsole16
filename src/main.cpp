@@ -14,6 +14,10 @@ static unsigned long s_lastTaskTime = 0; // for watchdog
 
 static  uint8_t msg[BLE_MSG_LENGTH];
 
+//Use a mutex to protect access to msg to prevent concurrent modifications
+static SemaphoreHandle_t msgMutex = xSemaphoreCreateMutex();
+
+
 // Function to pack sensor data into BLE message
 void PackSensorData(uint8_t* msg) {
   
@@ -66,7 +70,12 @@ void SensorTask(void* pvParam)
             Battery_Read();
             Acc_Read();
             Pressure_Read();
-            PackSensorData(msg);
+
+            //Lock data and pack it.
+            if (xSemaphoreTake(msgMutex, portMAX_DELAY)) {
+                PackSensorData(msg);
+                xSemaphoreGive(msgMutex);
+            }
         
           }
 
@@ -86,8 +95,11 @@ void CommunicationTask(void* pvParam)
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         // Send via BLE
         //if (BLE_GetNumOfSubscribers() > 0) {
-        BLE_SendBuffer(msg);
-        vTaskDelay(BLE_MSG_DELAY); // give BLE stack a moment to send
+            if (xSemaphoreTake(msgMutex, portMAX_DELAY)) {
+                BLE_SendBuffer(msg);
+                xSemaphoreGive(msgMutex);
+            }
+            BLE_SendBuffer(msg);
         //}
     }
 }

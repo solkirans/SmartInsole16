@@ -16,14 +16,14 @@ static NimBLEAdvertising* pAdvertising         = nullptr;
 static bool bleConnected                       = false;
 
 // Track subscription count
-static uint8_t numSubscribers = 0;
+static volatile uint8_t numSubscribers = 0;
 
 // Watchdog timer variables
 static unsigned long lastSuccessfulOperation   = 0;
 static const unsigned long BLE_WATCHDOG_TIMEOUT = 5000; // 5 seconds
 
 class MyServerCallbacks: public NimBLEServerCallbacks {
-    void onConnect(NimBLEServer* pServer, ble_gap_conn_desc* desc) {
+    void onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo) override {
         bleConnected = true;
         LOG_INFO("BLE device connected");
 
@@ -32,11 +32,9 @@ class MyServerCallbacks: public NimBLEServerCallbacks {
         }
     }
 
-    void onDisconnect(NimBLEServer* pServer) {
+    void onDisconnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo, int reason) {
         bleConnected = false;
         LOG_INFO("BLE device disconnected");
-
-        vTaskDelay(pdMS_TO_TICKS(100));
         if (pAdvertising) {
             pAdvertising->start();
             LOG_INFO("Advertising restarted");
@@ -45,9 +43,21 @@ class MyServerCallbacks: public NimBLEServerCallbacks {
 };
 
 class CharacteristicCallbacks: public NimBLECharacteristicCallbacks {
-    void onSubscribe(NimBLECharacteristic* pCharacteristic, ble_gap_conn_desc* desc, uint16_t subValue) {
-        numSubscribers += (subValue ? 1 : -1);
-        LOG_DEBUG("%d active subscribers", numSubscribers);
+    void onSubscribe(NimBLECharacteristic* pCharacteristic, NimBLEConnInfo& connInfo, uint16_t subValue) override  {
+        if (!pTxCharacteristic) {
+        LOG_ERROR("pTxCharacteristic is null!");
+        return;
+        }
+        // subValue = 0: Unsubscribed
+        // subValue = 1: Subscribed to notifications
+        // subValue = 2: Subscribed to indications
+
+        if (subValue != 0) {
+            numSubscribers++;
+        } else {
+            numSubscribers--;
+        }
+        LOG_INFO("onSubscribe Called! %d active subscribers", numSubscribers);
         if (pCharacteristic->getUUID().equals(pTxCharacteristic->getUUID())) {
             LOG_INFO("Client %s notifications.", subValue ? "subscribed to" : "unsubscribed from");
         }
@@ -62,8 +72,6 @@ static void BLE_Watchdog(bool FlagSide) {
         pServer = nullptr;
         pTxCharacteristic = nullptr;
         pAdvertising = nullptr;
-        vTaskDelay(pdMS_TO_TICKS(100));
-
         BLE_Init(FlagSide);
         lastSuccessfulOperation = millis();
     }
@@ -72,12 +80,6 @@ static void BLE_Watchdog(bool FlagSide) {
 
 uint8_t BLE_GetNumOfSubscribers(void)
 {
-/*************  ✨ Codeium Command ⭐  *************/
-/**
- * @brief Retrieve the current number of active BLE subscribers.
- * @return The number of clients currently subscribed to the BLE characteristic.
-
- */
     return numSubscribers;
 }
 
@@ -114,6 +116,9 @@ bool BLE_Init(bool FlagSide)
     }
     pServer->setCallbacks(new MyServerCallbacks());
 
+
+
+
     // 4. Create BLE Service
     NimBLEService* pService = pServer->createService(serviceUUID);
     if (!pService) {
@@ -132,11 +137,17 @@ bool BLE_Init(bool FlagSide)
     }
     // start  callback
     pTxCharacteristic->setCallbacks(new CharacteristicCallbacks());
-    // Add a descriptor for notifications
-    pTxCharacteristic->createDescriptor(
+
+
+    // Add CCCD descriptor explicitly
+    NimBLEDescriptor* cccd = pTxCharacteristic->createDescriptor(
         "2902",
         NIMBLE_PROPERTY::READ | NIMBLE_PROPERTY::WRITE
     );
+    if (!cccd) {
+        LOG_ERROR("Failed to create CCCD descriptor");
+    }
+
 
     // 6. Start the service
     pService->start();
@@ -183,12 +194,23 @@ bool BLE_SendBuffer(uint8_t* data)
 {
 // Try to send all buffered data
     bool anySent = false;
+    LOG_DEBUG("Num of Subcribers: %d", numSubscribers);
+    if (!pTxCharacteristic || !pServer) {
+        LOG_ERROR("BLE characteristic/server not initialized");
+        return false;
+    }
+
+    // Check if any client is connected
+    if (pServer->getConnectedCount() == 0) {
+        LOG_ERROR("No BLE clients connected");
+        return false;
+    }
 
 
     // Set the value and notify
     pTxCharacteristic->setValue(data, BLE_MSG_LENGTH);
     bool success = pTxCharacteristic->notify();
-
+    
     if (success) {
         lastSuccessfulOperation = millis();  // Update watchdog timer
         anySent = true;
