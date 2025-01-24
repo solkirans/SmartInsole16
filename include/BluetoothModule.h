@@ -10,12 +10,12 @@ static const char* INSOLE_NAME_RIGHT = "Insole Right";
 static const char* INSOLE_NAME_LEFT  = "Insole Left";
 
 // Right-Side UUIDs
-static const char* SERVICE_UUID_RIGHT        = "00000001-ABCD-1234-5678-0123456789AB";
-static const char* CHARACTERISTIC_UUID_RIGHT = "00000002-ABCD-1234-5678-0123456789AB";
+static const char* SERVICE_UUID_RIGHT        = "4276d6a5-3c2e-494a-bee2-0357f0c8e7f1";
+static const char* CHARACTERISTIC_UUID_RIGHT = "af4ce09f-721e-459b-9ba5-b1a743073afa";
 
 // Left-Side UUIDs
-static const char* SERVICE_UUID_LEFT         = "00000003-ABCD-1234-5678-0123456789AB";
-static const char* CHARACTERISTIC_UUID_LEFT  = "00000004-ABCD-1234-5678-0123456789AB";
+static const char* SERVICE_UUID_LEFT         = "e59f97e5-31c5-4d8c-bd07-27b9c0284d31";
+static const char* CHARACTERISTIC_UUID_LEFT  = "10480c36-db9c-476a-8ecf-129aa85243b8";
 
 
 
