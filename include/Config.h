@@ -65,23 +65,13 @@
 
 #define WATCHDOG_PERIOD_MS         3000    // Watchdog period
 
+
+
 // /////////////////////////////////////////////////////////////////
 // ''''''' BLE ''''''''''''''''''' //
-
-// BLE delay after message sent
-#define BLE_MSG_DELAY 1 // 1 ms
-
 // BLE message length
 #define BLE_MSG_LENGTH   39  // 1 byte battery, 6 bytes accel, 32 bytes pressure => 39 total
 
-
-// BLE task stack size
-#define BLE_TASK_STACK_SIZE   16384
-// ------------------------------
-// Advertising intervals
-// ------------------------------
-#define ADVERTISING_INTERVAL_MIN 0x50  // 0x50 * 0.625ms = ~31.25ms
-#define ADVERTISING_INTERVAL_MAX 0x100 // 0x100 * 0.625ms = ~160ms
 
 // /////////////////////////////////////////////////////////////////
 // ''''''' SENSORS ''''''''''''''''''' //

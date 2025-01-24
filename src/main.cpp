@@ -61,7 +61,7 @@ void SensorTask(void* pvParam)
         }
         s_lastTaskTime = now;
           // Read sensors
-          if (!testDeviceBLE)
+          if ((!testDeviceBLE) && (BLE_GetNumOfSubscribers() > 0))
           {
             Battery_Read();
             Acc_Read();
@@ -85,9 +85,10 @@ void CommunicationTask(void* pvParam)
 
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         // Send via BLE
+        //if (BLE_GetNumOfSubscribers() > 0) {
         BLE_SendBuffer(msg);
         vTaskDelay(BLE_MSG_DELAY); // give BLE stack a moment to send
-
+        //}
     }
 }
 

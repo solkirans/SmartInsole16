@@ -3,6 +3,27 @@
 
 #include <Arduino.h>
 
+
+// /////////////////////////////////////////////////////////////////
+// ''''''' BLE ''''''''''''''''''' //
+
+// BLE delay after message sent
+#define BLE_MSG_DELAY 1 // 1 ms
+
+
+
+
+// BLE task stack size
+#define BLE_TASK_STACK_SIZE   16384
+// ------------------------------
+// Advertising intervals
+// ------------------------------
+#define ADVERTISING_INTERVAL_MIN 0x50  // 0x50 * 0.625ms = ~31.25ms
+#define ADVERTISING_INTERVAL_MAX 0x100 // 0x100 * 0.625ms = ~160ms
+
+// Add configurable parameter for power:
+#define BLE_TX_POWER ESP_PWR_LVL_P9
+
 // ------------------------------
 // Parameters
 // ------------------------------
@@ -16,6 +37,7 @@ static const char* CHARACTERISTIC_UUID_RIGHT = "af4ce09f-721e-459b-9ba5-b1a74307
 // Left-Side UUIDs
 static const char* SERVICE_UUID_LEFT         = "e59f97e5-31c5-4d8c-bd07-27b9c0284d31";
 static const char* CHARACTERISTIC_UUID_LEFT  = "10480c36-db9c-476a-8ecf-129aa85243b8";
+
 
 
 
@@ -43,4 +65,5 @@ bool BLE_SendBuffer(uint8_t* data);
  */
 void BLE_Test(void);
 
+uint8_t BLE_GetNumOfSubscribers(void);
 #endif // BLUETOOTH_MODULE_H

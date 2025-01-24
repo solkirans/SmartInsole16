@@ -15,6 +15,9 @@ static NimBLECharacteristic* pTxCharacteristic = nullptr;
 static NimBLEAdvertising* pAdvertising         = nullptr;
 static bool bleConnected                       = false;
 
+// Track subscription count
+static uint8_t numSubscribers = 0;
+
 // Watchdog timer variables
 static unsigned long lastSuccessfulOperation   = 0;
 static const unsigned long BLE_WATCHDOG_TIMEOUT = 5000; // 5 seconds
@@ -43,6 +46,8 @@ class MyServerCallbacks: public NimBLEServerCallbacks {
 
 class CharacteristicCallbacks: public NimBLECharacteristicCallbacks {
     void onSubscribe(NimBLECharacteristic* pCharacteristic, ble_gap_conn_desc* desc, uint16_t subValue) {
+        numSubscribers += (subValue ? 1 : -1);
+        LOG_DEBUG("%d active subscribers", numSubscribers);
         if (pCharacteristic->getUUID().equals(pTxCharacteristic->getUUID())) {
             LOG_INFO("Client %s notifications.", subValue ? "subscribed to" : "unsubscribed from");
         }
@@ -53,13 +58,27 @@ class CharacteristicCallbacks: public NimBLECharacteristicCallbacks {
 static void BLE_Watchdog(bool FlagSide) {
     if (millis() - lastSuccessfulOperation > BLE_WATCHDOG_TIMEOUT) {
         LOG_INFO("BLE watchdog triggered - restarting BLE");
-
         NimBLEDevice::deinit(true);
-        delay(1000);
+        pServer = nullptr;
+        pTxCharacteristic = nullptr;
+        pAdvertising = nullptr;
+        vTaskDelay(pdMS_TO_TICKS(100));
 
         BLE_Init(FlagSide);
         lastSuccessfulOperation = millis();
     }
+}
+
+
+uint8_t BLE_GetNumOfSubscribers(void)
+{
+/*************  ✨ Codeium Command ⭐  *************/
+/**
+ * @brief Retrieve the current number of active BLE subscribers.
+ * @return The number of clients currently subscribed to the BLE characteristic.
+
+ */
+    return numSubscribers;
 }
 
 bool BLE_Init(bool FlagSide)
@@ -68,12 +87,17 @@ bool BLE_Init(bool FlagSide)
     const char* deviceName   = (FlagSide) ? INSOLE_NAME_RIGHT : INSOLE_NAME_LEFT;
     const char* serviceUUID  = (FlagSide) ? SERVICE_UUID_RIGHT : SERVICE_UUID_LEFT;
     const char* charUUID     = (FlagSide) ? CHARACTERISTIC_UUID_RIGHT : CHARACTERISTIC_UUID_LEFT;
+    
 
     // 2. Initialize NimBLE
+    NimBLEDevice::deinit(true); // Cleanup before re-initializing
+    pServer = nullptr;
+    pTxCharacteristic = nullptr;
+    pAdvertising = nullptr;
     NimBLEDevice::init(deviceName);
 
     // (Optional) Set TX power for better range
-    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, ESP_PWR_LVL_P9);
+    esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, BLE_TX_POWER);
 
     // Set MTU to 50 bytes
     NimBLEDevice::setMTU(50);
@@ -82,6 +106,10 @@ bool BLE_Init(bool FlagSide)
     pServer = NimBLEDevice::createServer();
     if (!pServer) {
         LOG_ERROR("Failed to create BLE server");
+        NimBLEDevice::deinit(true); // Explicit cleanup
+        pServer = nullptr;
+        pTxCharacteristic = nullptr;
+        pAdvertising = nullptr;
         return false;
     }
     pServer->setCallbacks(new MyServerCallbacks());
@@ -129,7 +157,9 @@ bool BLE_Init(bool FlagSide)
     // Configure scan response data
     NimBLEAdvertisementData scanResponse;
     scanResponse.setName(deviceName);
-    scanResponse.setManufacturerData("CorAlign");
+    // Use proper manufacturer ID + data format
+    uint8_t mfgData[] = {0x01, 0x02, 'C','o','r','A','l','i','g','n'};
+    scanResponse.setManufacturerData(mfgData, sizeof(mfgData));
 
     // Set the advertising and scan response data
     pAdvertising->setAdvertisementData(advData);
