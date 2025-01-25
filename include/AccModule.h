@@ -2,7 +2,7 @@
 #define ACC_MODULE_H
 
 #include <Arduino.h>
-#include "ErrorCodes.h"
+#include "CommonTypes.h"
 
 // /////////////////////////////////////////////////////////////////
 // ''''''' ACCELERATION SENSOR  ''''''''''''''''''' //

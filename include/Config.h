@@ -6,8 +6,8 @@
 // /////////////////////////////////////////////////////////////////
 // ''''''' GENERAL CONFIGURATION FOR THE SW ''''''''''''''''''' //
 
-#define g_sideFlag 0 // 0 => left, 1 => right
-#define testDeviceBLE 0 // if device is used for BLE tests, set this flag to 1
+#define g_sideFlag 1 // 0 => left, 1 => right
+#define testDeviceBLE 1 // if device is used for BLE tests, set this flag to 1
 #define LOG_SERIAL_ENABLED  1 // Serial output via logger enabled/disabled
 
 
@@ -70,7 +70,7 @@
 // /////////////////////////////////////////////////////////////////
 // ''''''' BLE ''''''''''''''''''' //
 // BLE message length
-#define BLE_MSG_LENGTH   39  // 1 byte battery, 6 bytes accel, 32 bytes pressure => 39 total
+//#define BLE_MSG_LENGTH   39  // 1 byte battery, 6 bytes accel, 32 bytes pressure => 39 total
 
 
 // /////////////////////////////////////////////////////////////////

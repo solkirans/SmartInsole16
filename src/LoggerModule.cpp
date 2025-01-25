@@ -68,19 +68,38 @@ void LoggerTask(void* pvParams)
 }
 
 // Prints the sensor byte array if enough time has passed
-void LoggerPrintLoopMessage(uint8_t* msg) {
+void LoggerPrintLoopMessage(SensorData* sensor_msg) {
+    
     unsigned long currentTime = millis();
     
-    // Check if enough time has passed since last print
     if (currentTime - lastPrintTime >= PRINT_INTERVAL) {
-        lastPrintTime = currentTime;  // Update the last print time
-        
-        // Create debug string
+        lastPrintTime = currentTime;
+
+        // Create debug string with all values in decimal
         String dbg;
-        for (int i = 0; i < BLE_MSG_LENGTH; i++) {
-            dbg += String(msg[i], HEX);
-            dbg += " ";
+        
+        // Battery
+        dbg += "Batt: ";
+        dbg += String(sensor_msg->battery);
+        dbg += " | ";
+
+        // Accelerometer
+        dbg += "Accel(";
+        dbg += String(sensor_msg->accel_x);
+        dbg += ", ";
+        dbg += String(sensor_msg->accel_y);
+        dbg += ", ";
+        dbg += String(sensor_msg->accel_z);
+        dbg += ") | ";
+
+        // Pressure array
+        dbg += "Press[";
+        for (int i = 0; i < 16; i++) {
+            dbg += String(sensor_msg->pressure[i]);
+            if (i < 15) dbg += ", ";
         }
+        dbg += "]";
+
         LOG_INFO("TxMsg: %s", dbg.c_str());
     }
 }

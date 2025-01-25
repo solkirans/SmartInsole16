@@ -2,10 +2,22 @@
 #define BLUETOOTH_MODULE_H
 
 #include <Arduino.h>
-
+#include "CommonTypes.h"
 
 // /////////////////////////////////////////////////////////////////
 // ''''''' BLE ''''''''''''''''''' //
+
+// BLE Watchdog timeout check interval
+#define BLE_WATCHDOG_PERIOD 1000 // 1 second
+
+// Advertising Watchdog timeout
+#define BLE_ADV_WATCHDOG_TIMEOUT 5000 // 5 seconds
+
+//BLE Init Watchdog timeout
+#define BLE_INIT_WATCHDOG_TIMEOUT  20000 // 20 seconds
+
+//BLE Reboot timeout
+#define BLE_REBOOT_WATCHDOG_TIMEOUT 60000 // 1 minute
 
 // BLE delay after message sent
 #define BLE_MSG_DELAY 1 // 1 ms
@@ -20,6 +32,12 @@
 // ------------------------------
 #define ADVERTISING_INTERVAL_MIN 0x50  // 0x50 * 0.625ms = ~31.25ms
 #define ADVERTISING_INTERVAL_MAX 0x100 // 0x100 * 0.625ms = ~160ms
+
+// ------------------------------
+// Advertising intervals PREFERRED
+// ------------------------------
+#define ADVERTISING_INTERVAL_MIN_PREFERRED 0x06  // Suggested parameters for iphone
+#define ADVERTISING_INTERVAL_MAX_PREFERRED 0x12 // Suggested parameters for iphone
 
 // Add configurable parameter for power:
 #define BLE_TX_POWER ESP_PWR_LVL_P9
@@ -58,12 +76,14 @@ bool BLE_Init(bool FlagSide);
  * @param msg A pointer to the 39-byte array to send
  * @return true if successfully sent, false if not connected
  */
-bool BLE_SendBuffer(uint8_t* data);
+bool BLE_SendBuffer(SensorData* sensor_msg);
 /**
  * @brief A unit test for the Bluetooth module. Initializes BLE
  *        (using "Insole Right" as an example) and sends a 39-byte test message.
  */
 void BLE_Test(void);
+
+void BLE_GeneralWathcdog(bool FlagSide); 
 
 uint8_t BLE_GetNumOfSubscribers(void);
 #endif // BLUETOOTH_MODULE_H

@@ -6,47 +6,37 @@
 #include "AccModule.h"
 #include "UtilitiesModule.h"
 #include "BluetoothModule.h"
-#include "ErrorCodes.h"
+#include "CommonTypes.h"
 
 // Globals
 
 static unsigned long s_lastTaskTime = 0; // for watchdog
 
-static  uint8_t msg[BLE_MSG_LENGTH];
-
 //Use a mutex to protect access to msg to prevent concurrent modifications
 static SemaphoreHandle_t msgMutex = xSemaphoreCreateMutex();
 
-
+SensorData sensor_data;
 // Function to pack sensor data into BLE message
-void PackSensorData(uint8_t* msg) {
+void PackSensorData() {
   
-    // Prepare the message and add it to the BLE msg queue
-    // Build 39-byte payload:
-    //   [0]   = BatteryVoltage (1 byte)
-    //   [1..6] = Acc_Array (3× int16 => 6 bytes)
-    //   [7..38] = Pressure_Array (16× uint16 => 32 bytes)
-    if (!msg) return;
+    // Prepare the message and add it to the struct
     
-    int index = 0;
+    // Add battery data
+    sensor_data.battery = BatteryVoltage;
     
-    // Pack battery data (1 byte)
-    msg[index++] = BatteryVoltage;
+    // Add accelerometer 
+    sensor_data.accel_x = Acc_Array[0];
+    sensor_data.accel_y = Acc_Array[1];
+    sensor_data.accel_z = Acc_Array[2];
     
-    // Pack accelerometer data (6 bytes - 3 int16_t values)
-    for (int i = 0; i < 3; i++) {
-        msg[index++] = (Acc_Array[i] >> 8) & 0xFF;  // High byte
-        msg[index++] = Acc_Array[i] & 0xFF;         // Low byte
-    }
-    
-    // Pack pressure data (32 bytes - 16 uint16_t values)
-    for (int i = 0; i < 16; i++) {
-        msg[index++] = (Pressure_Array[i] >> 8) & 0xFF;  // High byte
-        msg[index++] = Pressure_Array[i] & 0xFF;         // Low byte
-    }
+    // Copy the pressure data into the struct
+    memcpy(sensor_data.pressure, Pressure_Array, sizeof(sensor_data.pressure));
 }
 
-
+// Clear all struct fields to zero
+void clearSensorData(SensorData* data) {
+    memset(data, 0, sizeof(SensorData));
+}
 
 // 1) Sensor Task
 void SensorTask(void* pvParam)
@@ -56,7 +46,7 @@ void SensorTask(void* pvParam)
     
     for(;;) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
-
+        BLE_GeneralWathcdog(g_sideFlag);
         // Watchdog check
         unsigned long now = millis();
         if ((now - s_lastTaskTime) > WATCHDOG_PERIOD_MS && s_lastTaskTime != 0) {
@@ -73,13 +63,18 @@ void SensorTask(void* pvParam)
 
             //Lock data and pack it.
             if (xSemaphoreTake(msgMutex, portMAX_DELAY)) {
-                PackSensorData(msg);
+                PackSensorData();
                 xSemaphoreGive(msgMutex);
             }
         
           }
+          else
+          {
+            // If no BLE subscribers, clear the data
+            clearSensorData(&sensor_data);
+          }
 
-        LoggerPrintLoopMessage(msg);
+        LoggerPrintLoopMessage(&sensor_data);
 
     }
 }
@@ -96,10 +91,9 @@ void CommunicationTask(void* pvParam)
         // Send via BLE
         //if (BLE_GetNumOfSubscribers() > 0) {
             if (xSemaphoreTake(msgMutex, portMAX_DELAY)) {
-                BLE_SendBuffer(msg);
+                BLE_SendBuffer(&sensor_data);
                 xSemaphoreGive(msgMutex);
             }
-            BLE_SendBuffer(msg);
         //}
     }
 }

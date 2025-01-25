@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include "Config.h"
+#include "CommonTypes.h"
 
 // Logging macros (function name & line number included)
 #define LOG_ERROR(fmt, ...) LoggerPrint(LOGGER_LEVEL_ERROR, __FUNCTION__, __LINE__, fmt, ##__VA_ARGS__)
@@ -19,5 +20,5 @@ void LoggerPrint(uint8_t level, const char* func, int line, const char* format, 
 // FreeRTOS logger task
 void LoggerTask(void* pvParams);
 
-void LoggerPrintLoopMessage(uint8_t* msg);
+void LoggerPrintLoopMessage(SensorData* sensor_msg);
 #endif // LOGGER_MODULE_H

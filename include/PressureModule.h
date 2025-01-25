@@ -2,7 +2,7 @@
 #define PRESSURE_MODULE_H
 
 #include <Arduino.h>
-#include "ErrorCodes.h"
+#include "CommonTypes.h"
 
 #define PRESSURE_ERR_OK          ERR_OK
 #define PRESSURE_ERR_INIT        ERR_SENSOR_INIT_FAIL

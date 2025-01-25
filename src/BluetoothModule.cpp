@@ -20,12 +20,15 @@ static volatile uint8_t numSubscribers = 0;
 
 // Watchdog timer variables
 static unsigned long lastSuccessfulOperation   = 0;
-static const unsigned long BLE_WATCHDOG_TIMEOUT = 5000; // 5 seconds
+uint32_t lastCheck = 0;
+
+
 
 class MyServerCallbacks: public NimBLEServerCallbacks {
     void onConnect(NimBLEServer* pServer, NimBLEConnInfo& connInfo) override {
         bleConnected = true;
         LOG_INFO("BLE device connected");
+        lastSuccessfulOperation = millis();
 
         if (pAdvertising) {
             pAdvertising->stop();
@@ -64,10 +67,30 @@ class CharacteristicCallbacks: public NimBLECharacteristicCallbacks {
     }
 };
 
+void BLE_Adv_Watchdog() {
+    if((!bleConnected) && (!BLEDevice::getAdvertising()->isAdvertising())) {
+        if(millis() - lastSuccessfulOperation > BLE_ADV_WATCHDOG_TIMEOUT) {
+            LOG_WARN("Restarting advertising");
+            BLEDevice::startAdvertising();
+        }
+    }
+}
+
+void BLE_Restart_Watchdog() {
+    static uint32_t lastConnectionCheck = 0;
+    
+    if(!bleConnected && millis() - lastSuccessfulOperation > BLE_REBOOT_WATCHDOG_TIMEOUT) {
+        LOG_ERROR("Critical BLE failure - restarting device");
+        ESP.restart();
+    }
+}
+
+
+
 // Optional watchdog to re-init BLE if idle too long
-static void BLE_Watchdog(bool FlagSide) {
-    if (millis() - lastSuccessfulOperation > BLE_WATCHDOG_TIMEOUT) {
-        LOG_INFO("BLE watchdog triggered - restarting BLE");
+static void BLE_Init_Watchdog(bool FlagSide) {
+    if (millis() - lastSuccessfulOperation > BLE_INIT_WATCHDOG_TIMEOUT) {
+        LOG_ERROR("BLE watchdog triggered - restarting BLE");
         NimBLEDevice::deinit(true);
         pServer = nullptr;
         pTxCharacteristic = nullptr;
@@ -77,6 +100,19 @@ static void BLE_Watchdog(bool FlagSide) {
     }
 }
 
+void BLE_GeneralWathcdog(bool FlagSide) {
+    LOG_DEBUG("lastCheck: %d", lastCheck);
+    LOG_DEBUG("lastSuccessfulOperation: %d", lastSuccessfulOperation);
+    if(millis() - lastCheck > BLE_WATCHDOG_PERIOD) 
+    { // Run every 1 second
+        lastCheck = millis();
+        LOG_DEBUG("Watchdog check");
+        BLE_Adv_Watchdog();
+        BLE_Init_Watchdog(FlagSide);
+        BLE_Restart_Watchdog();
+
+    }
+}
 
 uint8_t BLE_GetNumOfSubscribers(void)
 {
@@ -190,7 +226,7 @@ bool BLE_Init(bool FlagSide)
     return true;
 }
 
-bool BLE_SendBuffer(uint8_t* data)
+bool BLE_SendBuffer(SensorData* sensor_msg)
 {
 // Try to send all buffered data
     bool anySent = false;
@@ -208,7 +244,7 @@ bool BLE_SendBuffer(uint8_t* data)
 
 
     // Set the value and notify
-    pTxCharacteristic->setValue(data, BLE_MSG_LENGTH);
+    pTxCharacteristic->setValue((uint8_t*)&sensor_msg, sizeof(SensorData));
     bool success = pTxCharacteristic->notify();
     
     if (success) {
@@ -224,29 +260,26 @@ bool BLE_SendBuffer(uint8_t* data)
 // Modified BLE_Test to demonstrate buffer functionality
 void BLE_Test(void)
 {
-    // Example: initialize as "Right" side
+    // Initialize BLE (right side)
     if (!BLE_Init(true)) {
-        LOG_ERROR("BLE_Test: Init failed");
+        LOG_ERROR("BLE_Init failed");
         return;
     }
 
-    // Create multiple test messages
-    uint8_t testMsg[BLE_MSG_LENGTH];
-    
-    // Send multiple test messages to demonstrate buffer
-    for (int j = 0; j < 5; j++) {
-        // Fill test message with incrementing values
-        for (int i = 0; i < BLE_MSG_LENGTH; i++) {
-            testMsg[i] = (i + j) % 256;
-        }
-        
-        // Send the test message
-        BLE_SendBuffer(testMsg);
-        
-        // Add delay between test messages
-        delay(100);
+    // Create a dummy sensor message
+    SensorData sensor_msg;
+    sensor_msg.battery = 100;
+    sensor_msg.accel_x = 123;
+    sensor_msg.accel_y = 456;
+    sensor_msg.accel_z = 789;
+    for (int i = 0; i < 16; i++) {
+        sensor_msg.pressure[i] = 1000 + i;
     }
 
-    LOG_INFO("BLE_Test complete. Use a BLE scanner to find '%s' and enable notifications",
-             INSOLE_NAME_RIGHT);
+    // Send the message
+    if (BLE_SendBuffer(&sensor_msg)) {
+        LOG_INFO("BLE_SendBuffer: success");
+    } else {
+        LOG_ERROR("BLE_SendBuffer: failed");
+    }
 }
