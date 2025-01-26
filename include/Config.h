@@ -11,8 +11,8 @@
 // /////////////////////////////////////////////////////////////////
 // ''''''' GENERAL CONFIGURATION FOR THE SW ''''''''''''''''''' //
 
-#define g_sideFlag 1 // 0 => left, 1 => right
-#define testDeviceBLE 1 // if device is used for BLE tests, set this flag to 1
+#define g_sideFlag 0 // 0 => left, 1 => right
+#define testDeviceBLE 0 // if device is used for BLE tests, set this flag to 1
 
 
 // I2C pins (ESP32)
@@ -58,7 +58,7 @@
 
 
 #ifdef LOG_LEVEL_SELECTED
-    #if LOG_LEVEL_SELECTED == LOGGER_LEVEL_DEBUG
+    #if LOG_LEVEL_SELECTED >= LOGGER_LEVEL_DEBUG
         #define LOOP_INTERVAL_MS   DEBUG_LOOP_INTERVAL_MS     // Debug mode: 2 Hz
     #else
       #define LOOP_INTERVAL_MS   DEFAULT_LOOP_INTERVAL_MS          // Default: 50 Hz if LOG_LEVEL not defined

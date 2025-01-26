@@ -58,7 +58,7 @@ void SensorTask(void* pvParam)
         }
         bool connstatus = Get_BLE_Connected_Status();
         uint8_t numSubscribers = BLE_GetNumOfSubscribers();
-        if (connstatus && (numSubscribers > 0))
+        if (connstatus || (numSubscribers > 0))
         {
             esp_task_wdt_reset();
         }
@@ -90,7 +90,7 @@ void CommunicationTask(void* pvParam)
             LOG_DEBUG("Connection Status: %d", connstatus);
             LOG_DEBUG("Number of Subscribers: %d", numSubscribers);
         }
-        if (connstatus && (numSubscribers > 0))
+        if (connstatus || (numSubscribers > 0))
         {
 
             if (LOG_LEVEL_SELECTED >= LOGGER_LEVEL_DEBUG)
@@ -113,6 +113,7 @@ void setup()
     Serial.printf("Logger level set to %d\n\r", LOG_LEVEL_SELECTED);
     LOG_DEBUG("LoggerInit complete.");
     
+    LOG_DEBUG("Sampling Interval %d ms", LOOP_INTERVAL_MS);
 
     deviceResetReason();
     esp_task_wdt_init(WATCHDOG_PERIOD, true);
