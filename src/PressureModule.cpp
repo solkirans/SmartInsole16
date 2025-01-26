@@ -54,8 +54,11 @@ uint8_t Pressure_Read(void)
             Pressure_Array[dev * 4 + ch] = (uint16_t) raw;
         }
     }
-
-    Pressure_PrintValues();
+    if (LOG_LEVEL_SELECTED >= LOGGER_LEVEL_DEBUG)
+    {
+        Pressure_PrintValues();
+    }
+    
 
 
     Pressure_Status = PRESSURE_STATUS_OK;

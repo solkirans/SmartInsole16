@@ -16,65 +16,53 @@ static unsigned long s_lastTaskTime = 0; // for watchdog
 static SemaphoreHandle_t msgMutex = xSemaphoreCreateMutex();
 
 SensorData sensor_data;
-// Function to pack sensor data into BLE message
-void PackSensorData() {
-  
-    // Prepare the message and add it to the struct
-    
-    // Add battery data
-    sensor_data.battery = BatteryVoltage;
-    
-    // Add accelerometer 
-    sensor_data.accel_x = Acc_Array[0];
-    sensor_data.accel_y = Acc_Array[1];
-    sensor_data.accel_z = Acc_Array[2];
-    
-    // Copy the pressure data into the struct
-    memcpy(sensor_data.pressure, Pressure_Array, sizeof(sensor_data.pressure));
-}
 
-// Clear all struct fields to zero
-void clearSensorData(SensorData* data) {
-    memset(data, 0, sizeof(SensorData));
-}
-
+TaskHandle_t SensorTaskHandle = NULL;
+TaskHandle_t CommunicationTaskHandle = NULL;
+TaskHandle_t LoggerTaskHandle = NULL;
 // 1) Sensor Task
 void SensorTask(void* pvParam)
 {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(LOOP_INTERVAL_MS);
-    
+    esp_task_wdt_add(NULL);
     for(;;) {
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
-        BLE_GeneralWathcdog(g_sideFlag);
-        // Watchdog check
-        unsigned long now = millis();
-        if ((now - s_lastTaskTime) > WATCHDOG_PERIOD_MS && s_lastTaskTime != 0) {
-            LOG_ERROR("Watchdog triggered, system restarting...");
-            ESP.restart();
-        }
-        s_lastTaskTime = now;
           // Read sensors
-          if ((!testDeviceBLE) && (BLE_GetNumOfSubscribers() > 0))
+          if (BLE_GetNumOfSubscribers() > 0)
           {
-            Battery_Read();
-            Acc_Read();
-            Pressure_Read();
-
-            //Lock data and pack it.
-            if (xSemaphoreTake(msgMutex, portMAX_DELAY)) {
-                PackSensorData();
-                xSemaphoreGive(msgMutex);
+            if (!testDeviceBLE)
+            {
+                Battery_Read();
+                Acc_Read();
+                Pressure_Read();
+                //Lock data and pack it.
+                if (xSemaphoreTake(msgMutex, portMAX_DELAY)) {
+                    PackSensorData(sensor_data);
+                    xSemaphoreGive(msgMutex);
+                }
             }
-        
+            else
+            {
+                addDummyData(sensor_data);
+            }
           }
           else
           {
             // If no BLE subscribers, clear the data
             clearSensorData(&sensor_data);
           }
-
-        LoggerPrintLoopMessage(&sensor_data);
+        if (LOG_LEVEL_SELECTED >= LOGGER_LEVEL_DEBUG)
+        {
+            LoggerPrintLoopMessage(&sensor_data);
+        }
+        bool connstatus = Get_BLE_Connected_Status();
+        uint8_t numSubscribers = BLE_GetNumOfSubscribers();
+        if (connstatus && (numSubscribers > 0))
+        {
+            esp_task_wdt_reset();
+        }
+        
 
     }
 }
@@ -84,38 +72,61 @@ void CommunicationTask(void* pvParam)
 {
     TickType_t xLastWakeTime = xTaskGetTickCount();
     const TickType_t xFrequency = pdMS_TO_TICKS(LOOP_INTERVAL_MS);
-
+     esp_task_wdt_add(NULL);
     for(;;) {
 
         vTaskDelayUntil(&xLastWakeTime, xFrequency);
         // Send via BLE
-        //if (BLE_GetNumOfSubscribers() > 0) {
+        if (BLE_GetNumOfSubscribers() > 0) {
             if (xSemaphoreTake(msgMutex, portMAX_DELAY)) {
                 BLE_SendBuffer(&sensor_data);
                 xSemaphoreGive(msgMutex);
             }
-        //}
+        }
+        bool connstatus = Get_BLE_Connected_Status();
+        uint8_t numSubscribers = BLE_GetNumOfSubscribers();
+        if (LOG_LEVEL_SELECTED >= LOGGER_LEVEL_DEBUG)
+        {
+            LOG_DEBUG("Connection Status: %d", connstatus);
+            LOG_DEBUG("Number of Subscribers: %d", numSubscribers);
+        }
+        if (connstatus && (numSubscribers > 0))
+        {
+
+            if (LOG_LEVEL_SELECTED >= LOGGER_LEVEL_DEBUG)
+            {
+                LOG_DEBUG("Watchdog fed by CommunicationTask");
+            }
+            esp_task_wdt_reset();
+        }
     }
+
+    
 }
 
 // 3) The usual Arduino setup
 void setup()
 {
+
     // 1. Logger init: let’s say we want INFO logs, with serial enabled
     LoggerInit();
+    Serial.printf("Logger level set to %d\n\r", LOG_LEVEL_SELECTED);
     LOG_DEBUG("LoggerInit complete.");
+    
 
+    deviceResetReason();
+    esp_task_wdt_init(WATCHDOG_PERIOD, true);
 
     // 2. Create logger task
-    xTaskCreate(LoggerTask, "LoggerTask", LOGGER_TASK_STACK_SIZE, NULL, 3, NULL);
-    LOG_DEBUG("LoggerTask complete.");
-
+    xTaskCreate(LoggerTask, "LoggerTask", LOGGER_TASK_STACK_SIZE, NULL, 3, &LoggerTaskHandle);
+    LOG_DEBUG("LoggerTask setup complete.");
 
 
     // 3. Initialize I2C
     Wire.begin(I2C_SDA_Pin, I2C_SCL_Pin, 400000); // 400 kHz
     LOG_DEBUG("Wire.begin complete.");
     i2cScanner();
+
     if (!testDeviceBLE)
     {
       // 4. Init battery (MAX17048)
@@ -147,15 +158,17 @@ void setup()
 
 
     // 8. Create tasks
-    xTaskCreate(SensorTask, "SensorTask", SENSOR_TASK_STACK_SIZE, NULL, 2, NULL);
-    LOG_DEBUG("SensorTask complete.");
+    xTaskCreate(SensorTask, "SensorTask", SENSOR_TASK_STACK_SIZE, NULL, 2, &SensorTaskHandle);
+    LOG_DEBUG("SensorTask setup complete.");
 
 
-    xTaskCreate(CommunicationTask, "CommTask", BLE_TASK_STACK_SIZE, NULL, 1, NULL);
-    LOG_DEBUG("CommunicationTask complete.");
+    xTaskCreate(CommunicationTask, "CommTask", BLE_TASK_STACK_SIZE, NULL, 1, &CommunicationTaskHandle);
+    LOG_DEBUG("CommunicationTask setup complete.");
 
     
     LOG_INFO("Setup complete.");
+
+    LOG_DEBUG("SensorData size: %d bytes\n", sizeof(SensorData));
 }
 
 void loop()

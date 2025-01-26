@@ -1,6 +1,4 @@
 #include "UtilitiesModule.h"
-#include "LoggerModule.h"
-#include "Config.h"
 #include <Wire.h>
 #include <Adafruit_MAX1704X.h>
 
@@ -8,6 +6,64 @@ static Adafruit_MAX17048 maxlipo;
 uint8_t BatteryVoltage = 0;
 BatteryStatus_t Battery_Status = BATTERY_STATUS_OK;
 static uint32_t s_lastReadTime = 0;
+
+
+void deviceResetReason(){
+    esp_reset_reason_t reason = esp_reset_reason();
+    Serial.print("Reset reason: ");
+    switch (reason) {
+        case ESP_RST_POWERON:   LOG_DEBUG("ESP_RST_POWERON"); break;
+        case ESP_RST_EXT:       LOG_DEBUG("ESP_RST_EXT"); break;
+        case ESP_RST_SW:        LOG_DEBUG("ESP_RST_SW"); break;
+        case ESP_RST_PANIC:     LOG_DEBUG("ESP_RST_PANIC"); break;
+        case ESP_RST_INT_WDT:   LOG_DEBUG("ESP_RST_INT_WDT"); break;
+        case ESP_RST_TASK_WDT:  LOG_DEBUG("ESP_RST_TASK_WDT"); break;
+        case ESP_RST_WDT:       LOG_DEBUG("ESP_RST_WDT"); break;  // Generic WDT
+        case ESP_RST_DEEPSLEEP: LOG_DEBUG("ESP_RST_DEEPSLEEP"); break;
+        case ESP_RST_BROWNOUT:  LOG_DEBUG("ESP_RST_BROWNOUT"); break;
+        case ESP_RST_SDIO:      LOG_DEBUG("ESP_RST_SDIO"); break;
+        default:                LOG_DEBUG("UNKNOWN"); break;
+    }
+}
+
+// Example: We want ~30 seconds total WDT, using 3 stages of ~10s each
+// Use prescaler so each tick = 1 ms => prescaler = 80 MHz / 80,000 = 1 kHz
+// Then 10s => 10,000 ticks per stage
+
+// Function to pack sensor data into BLE message
+void PackSensorData(SensorData &sensor_data) {
+  
+    // Prepare the message and add it to the struct
+    
+    // Add battery data
+    sensor_data.battery = BatteryVoltage;
+    
+    // Add accelerometer 
+    sensor_data.accel_x = Acc_Array[0];
+    sensor_data.accel_y = Acc_Array[1];
+    sensor_data.accel_z = Acc_Array[2];
+    
+    // Copy the pressure data into the struct
+    memcpy(sensor_data.pressure, Pressure_Array, sizeof(sensor_data.pressure));
+}
+
+// Clear all struct fields to zero
+void clearSensorData(SensorData* data) {
+    memset(data, 0, sizeof(SensorData));
+}
+
+
+void addDummyData(SensorData &sensor_data){
+    sensor_data.battery = 100;
+    sensor_data.accel_x = 123;
+    sensor_data.accel_y = 456;
+    sensor_data.accel_z = 789;
+    for (int i = 0; i < 16; i++) 
+    {
+        sensor_data.pressure[i] = 1000 + i;
+    }
+}
+
 
 uint8_t Battery_Init(void)
 {

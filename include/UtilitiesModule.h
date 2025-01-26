@@ -3,6 +3,14 @@
 
 #include <Arduino.h>
 #include "CommonTypes.h"
+#include "LoggerModule.h"
+#include "PressureModule.h"
+#include "AccModule.h"
+#include "LoggerModule.h"
+#include "Config.h"
+extern "C" {
+  #include "esp_task_wdt.h"
+}
 
 #define BATT_ERR_OK         ERR_OK
 #define BATT_ERR_INIT       ERR_SENSOR_INIT_FAIL
@@ -24,5 +32,11 @@ uint8_t Battery_Init(void);
 uint8_t Battery_Read(void);
 void Battery_Test(void);
 void i2cScanner(void);
+void PackSensorData(SensorData &sensor_data);
+void setupTimerGroupWDT();
+void feedHardwareWDT();
+void clearSensorData(SensorData* data);
+void addDummyData(SensorData &sensor_data);
+void deviceResetReason();
 
 #endif

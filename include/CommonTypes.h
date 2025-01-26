@@ -2,6 +2,10 @@
 #define COMMON_TYPES_H
 
 #include <stdint.h>  // For fixed-width integer types (e.g., uint8_t, int16_t)
+extern "C" {
+  #include "esp_task_wdt.h"
+}
+
 
 // Common error definitions (shared across modules)
 #define ERR_OK                     0x00

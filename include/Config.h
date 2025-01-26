@@ -1,14 +1,18 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-
+// /////////////////////////////////////////////////////////////////
+// ''''''' General watchdog ''''''''''''''''''' //
+//  Watchdog period, 10 seconds for each stage, 
+//system reset happens in 3 stages; interrupt, cpu reset, and system reset
+//It takes 3 seconds.
+#define WATCHDOG_PERIOD                  5 // second
 
 // /////////////////////////////////////////////////////////////////
 // ''''''' GENERAL CONFIGURATION FOR THE SW ''''''''''''''''''' //
 
 #define g_sideFlag 1 // 0 => left, 1 => right
 #define testDeviceBLE 1 // if device is used for BLE tests, set this flag to 1
-#define LOG_SERIAL_ENABLED  1 // Serial output via logger enabled/disabled
 
 
 // I2C pins (ESP32)
@@ -39,8 +43,8 @@
 
 
 
-#define LOGGER_QUEUE_SIZE  10   // number of messages that can be queued
-#define LOGGER_MAX_LOG_LENGTH  128  // max length per log message
+#define LOGGER_QUEUE_SIZE  50   // number of messages that can be queued
+#define LOGGER_MAX_LOG_LENGTH  256  // max length per log message
 
 // Logger task stack size
 #define LOGGER_TASK_STACK_SIZE   16384
@@ -62,8 +66,6 @@
 #else
     #define LOOP_INTERVAL_MS   DEFAULT_LOOP_INTERVAL_MS          // Default: 50 Hz if LOG_LEVEL not defined
 #endif
-
-#define WATCHDOG_PERIOD_MS         3000    // Watchdog period
 
 
 

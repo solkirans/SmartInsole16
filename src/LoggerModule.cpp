@@ -17,7 +17,6 @@ static QueueHandle_t s_loggerQueue = nullptr;
 void LoggerInit()
 {
     s_logLevel = LOG_LEVEL_SELECTED;
-    s_serialEnabled = LOG_SERIAL_ENABLED;
 
     Serial.begin(115200);
     // Create the queue if not created
@@ -29,7 +28,7 @@ void LoggerInit()
 void LoggerPrint(uint8_t level, const char* func, int line, const char* format, ...)
 {
     // If level is above current log level, skip
-    if ((level > s_logLevel) || (!s_serialEnabled)) {
+    if (level > s_logLevel) {
         return;
     }
 
@@ -55,14 +54,14 @@ void LoggerPrint(uint8_t level, const char* func, int line, const char* format, 
 
 void LoggerTask(void* pvParams)
 {
+    esp_task_wdt_add(NULL); // "NULL" means "this current task"
     LogItem_t item;
     for (;;) {
         // Wait for next log message
         if (xQueueReceive(s_loggerQueue, &item, portMAX_DELAY) == pdTRUE) {
-            if (s_serialEnabled) {
                 Serial.println(item.msg);
-            }
             // If serial not enabled, we discard or could store logs in memory
+            esp_task_wdt_reset();
         }
     }
 }

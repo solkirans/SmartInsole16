@@ -7,18 +7,6 @@
 // /////////////////////////////////////////////////////////////////
 // ''''''' BLE ''''''''''''''''''' //
 
-// BLE Watchdog timeout check interval
-#define BLE_WATCHDOG_PERIOD 1000 // 1 second
-
-// Advertising Watchdog timeout
-#define BLE_ADV_WATCHDOG_TIMEOUT 5000 // 5 seconds
-
-//BLE Init Watchdog timeout
-#define BLE_INIT_WATCHDOG_TIMEOUT  20000 // 20 seconds
-
-//BLE Reboot timeout
-#define BLE_REBOOT_WATCHDOG_TIMEOUT 60000 // 1 minute
-
 // BLE delay after message sent
 #define BLE_MSG_DELAY 1 // 1 ms
 
@@ -83,7 +71,7 @@ bool BLE_SendBuffer(SensorData* sensor_msg);
  */
 void BLE_Test(void);
 
-void BLE_GeneralWathcdog(bool FlagSide); 
+bool Get_BLE_Connected_Status(void);
 
 uint8_t BLE_GetNumOfSubscribers(void);
 #endif // BLUETOOTH_MODULE_H
