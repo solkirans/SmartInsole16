@@ -52,8 +52,8 @@
 
 
 // Default loop intervals and watchdog
-#define DEFAULT_LOOP_INTERVAL_MS   20      // sensor loop: 100 Hz
-#define DEBUG_LOOP_INTERVAL_MS   500      // sensor loop: 100 Hz
+#define DEFAULT_LOOP_INTERVAL_MS   100      // sensor loop: 10 Hz
+#define DEBUG_LOOP_INTERVAL_MS   500      // sensor loop: 2 Hz
 #define PRINT_INTERVAL      1000     // Print every 1000 ms if serial is enabled
 
 

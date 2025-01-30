@@ -161,15 +161,13 @@ bool BLE_Init(bool FlagSide)
 
     // Configure advertising data
     NimBLEAdvertisementData advData;
-    advData.setName(deviceName);
-    advData.setCompleteServices(NimBLEUUID(serviceUUID));
     advData.setFlags(0x06); // BR/EDR not supported + LE General Discoverable Mode
-
+    advData.setName(deviceName);
+    
     // Configure scan response data
     NimBLEAdvertisementData scanResponse;
-    scanResponse.setName(deviceName);
-    // Use proper manufacturer ID + data format
-    uint8_t mfgData[] = {0x01, 0x02, 'C','o','r','A','l','i','g','n'};
+    advData.setCompleteServices(NimBLEUUID(serviceUUID));
+    uint8_t mfgData[] = {0x01, 0x02}; // Shortened manufacturer data
     scanResponse.setManufacturerData(mfgData, sizeof(mfgData));
 
     // Set the advertising and scan response data
