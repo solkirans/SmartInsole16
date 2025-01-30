@@ -1,85 +1,82 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-// /////////////////////////////////////////////////////////////////
-// ''''''' General watchdog ''''''''''''''''''' //
-//  Watchdog period, 10 seconds for each stage, 
-//system reset happens in 3 stages; interrupt, cpu reset, and system reset
-//It takes 3 seconds.
-#define WATCHDOG_PERIOD                  5 // second
+// ******************************************
+// Device Configuration
+// ******************************************
+#define DEVICE_SIDE_LEFT     0
+#define DEVICE_SIDE_RIGHT    1
+#define g_sideFlag           DEVICE_SIDE_LEFT  // Select device side
+#define testDeviceBLE        1                 // Set to 1 for BLE testing with dummy data
 
-// /////////////////////////////////////////////////////////////////
-// ''''''' GENERAL CONFIGURATION FOR THE SW ''''''''''''''''''' //
+// ******************************************
+// Hardware Configuration
+// ******************************************
+// I2C Settings
+#define I2C_SCL_Pin         22
+#define I2C_SDA_Pin         21
+#define I2C_FREQUENCY       400000  // 400kHz
 
-#define g_sideFlag 0 // 0 => left, 1 => right
-#define testDeviceBLE 0 // if device is used for BLE tests, set this flag to 1
+// ******************************************
+// Task Configuration
+// ******************************************
+// Task Priorities (higher number = higher priority)
+#define TASK_PRIORITY_LOGGER     1
+#define TASK_PRIORITY_SENSOR     3    // Increased priority
+#define TASK_PRIORITY_BLE        4    // Highest priority for consistent timing
 
+// Core Pinning (ESP32 has 2 cores)
+#define CORE_LOGGER     0    // Logger on core 0
+#define CORE_SENSOR     1    // Sensor on core 1
+#define CORE_BLE        0    // BLE on core 0
 
-// I2C pins (ESP32)
-#define I2C_SCL_Pin     22
-#define I2C_SDA_Pin     21
+// Task Stack Sizes
+#define LOGGER_TASK_STACK_SIZE   4096
+#define SENSOR_TASK_STACK_SIZE   4096
+#define BLE_TASK_STACK_SIZE      8192
 
+// ******************************************
+// Timing Configuration (milliseconds)
+// ******************************************
+#define LOOP_INTERVAL_MS         20    // Sensor sampling at 50Hz
+#define BLE_TX_INTERVAL_MS       20    // BLE transmission at 50Hz (matched with sampling)
+#define PRINT_INTERVAL           5000  // Status print interval
+#define WATCHDOG_PERIOD          5    // Watchdog timeout in seconds
 
-// /////////////////////////////////////////////////////////////////
-// ''''''' LOGGER ''''''''''''''''''' //
-#ifndef CORE_DEBUG_LEVEL
-#define CORE_DEBUG_LEVEL 5  // Default if not set
-#endif
+// Timing Tolerances
+#define BLE_TX_TIMING_TOLERANCE_MS     5  // Maximum allowed deviation from BLE interval
+#define SENSOR_TIMING_TOLERANCE_MS     5  // Maximum allowed deviation from sensor interval
 
-#define LOG_LEVEL_SELECTED  CORE_DEBUG_LEVEL // Selected_Logging Level
-
-
-
-
+// ******************************************
+// Logger Configuration
+// ******************************************
+#define LOG_LEVEL_SELECTED    CORE_DEBUG_LEVEL
+#define LOGGER_QUEUE_SIZE     25      // Reduced from 50 to save memory
+#define LOGGER_MAX_LOG_LENGTH 128     // Reduced from 256 to save memory
 
 // Logging Levels
-#define LOGGER_LEVEL_NA  0
-#define LOGGER_LEVEL_ERROR  1
-#define LOGGER_LEVEL_WARN  2
-#define LOGGER_LEVEL_INFO   3
-#define LOGGER_LEVEL_DEBUG  4
-#define LOGGER_LEVEL_VERBOSE  5
+#define LOGGER_LEVEL_NA      0
+#define LOGGER_LEVEL_ERROR   1
+#define LOGGER_LEVEL_WARN    2
+#define LOGGER_LEVEL_INFO    3
+#define LOGGER_LEVEL_DEBUG   4
+#define LOGGER_LEVEL_VERBOSE 5
 
+// ******************************************
+// BLE Configuration
+// ******************************************
+// Recovery Settings
+#define BLE_MAX_ERRORS_BEFORE_RECOVERY  3
+#define BLE_RECOVERY_ATTEMPTS           2
+#define BLE_RECOVERY_DELAY_MS           500
 
+// Mutex Timeout
+#define MUTEX_TIMEOUT_MS               2     // Reduced from 5ms for tighter timing
 
-
-#define LOGGER_QUEUE_SIZE  50   // number of messages that can be queued
-#define LOGGER_MAX_LOG_LENGTH  256  // max length per log message
-
-// Logger task stack size
-#define LOGGER_TASK_STACK_SIZE   16384
-
-
-
-// Default loop intervals and watchdog
-#define DEFAULT_LOOP_INTERVAL_MS   100      // sensor loop: 10 Hz
-#define DEBUG_LOOP_INTERVAL_MS   500      // sensor loop: 2 Hz
-#define PRINT_INTERVAL      1000     // Print every 1000 ms if serial is enabled
-
-
-#ifdef LOG_LEVEL_SELECTED
-    #if LOG_LEVEL_SELECTED >= LOGGER_LEVEL_DEBUG
-        #define LOOP_INTERVAL_MS   DEBUG_LOOP_INTERVAL_MS     // Debug mode: 2 Hz
-    #else
-      #define LOOP_INTERVAL_MS   DEFAULT_LOOP_INTERVAL_MS          // Default: 50 Hz if LOG_LEVEL not defined
-    #endif
-#else
-    #define LOOP_INTERVAL_MS   DEFAULT_LOOP_INTERVAL_MS          // Default: 50 Hz if LOG_LEVEL not defined
-#endif
-
-
-
-// /////////////////////////////////////////////////////////////////
-// ''''''' BLE ''''''''''''''''''' //
-// BLE message length
-//#define BLE_MSG_LENGTH   39  // 1 byte battery, 6 bytes accel, 32 bytes pressure => 39 total
-
-
-// /////////////////////////////////////////////////////////////////
-// ''''''' SENSORS ''''''''''''''''''' //
-
-// BLE task stack size
-#define SENSOR_TASK_STACK_SIZE   16384
-
+// ******************************************
+// Sensor Configuration
+// ******************************************
+// Battery Reading Interval
+#define BATTERY_READ_INTERVAL_MS    (5 * 60 * 1000)  // 5 minutes
 
 #endif // CONFIG_H

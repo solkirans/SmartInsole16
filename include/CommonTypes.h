@@ -21,12 +21,13 @@ extern "C" {
 
 #pragma pack(push, 1)  // Disable struct padding
 typedef struct {
+    uint32_t timestamp;   // 4 bytes - milliseconds since boot
     uint8_t battery;      // 1 byte
     int16_t accel_x;      // 2 bytes
     int16_t accel_y;      // 2 bytes
     int16_t accel_z;      // 2 bytes
     uint16_t pressure[16]; // 16 × 2 bytes = 32 bytes
-} SensorData;             // Total size: 1 + 2 + 2 + 2 + 32 = 39 bytes
+} SensorData;             // Total size: 4 + 1 + 2 + 2 + 2 + 32 = 43 bytes
 #pragma pack(pop)        // Restore default struct padding
 
 #endif // COMMON_TYPES_H

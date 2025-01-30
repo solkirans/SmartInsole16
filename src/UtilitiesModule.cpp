@@ -49,18 +49,29 @@ void PackSensorData(SensorData &sensor_data) {
 
 // Clear all struct fields to zero
 void clearSensorData(SensorData* data) {
-    memset(data, 0, sizeof(SensorData));
+    if (data != nullptr) {
+        memset(data, 0, sizeof(SensorData));
+    }
 }
 
 
 void addDummyData(SensorData &sensor_data){
-    sensor_data.battery = 100;
-    sensor_data.accel_x = 123;
-    sensor_data.accel_y = 456;
-    sensor_data.accel_z = 789;
+    // Generate a random number between -1 and 1
+    float randomValue = ((float)random(-1000, 1000) / 1000.0) * 2.0 - 1.0;
+
+    // Add timestamp
+    sensor_data.timestamp = millis();
+
+    // Add random value to battery and accelerometer data
+    sensor_data.battery = 100 + randomValue;
+    sensor_data.accel_x = 123 + randomValue;
+    sensor_data.accel_y = 456 + randomValue;
+    sensor_data.accel_z = 789 + randomValue;
+
+    // Multiply random value by 100 and add to pressure data
     for (int i = 0; i < 16; i++) 
     {
-        sensor_data.pressure[i] = 1000 + i;
+        sensor_data.pressure[i] = 1000 + i + (randomValue * 100);
     }
 }
 

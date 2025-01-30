@@ -7,14 +7,6 @@
 // /////////////////////////////////////////////////////////////////
 // ''''''' BLE ''''''''''''''''''' //
 
-// BLE delay after message sent
-#define BLE_MSG_DELAY 1 // 1 ms
-
-
-
-
-// BLE task stack size
-#define BLE_TASK_STACK_SIZE   16384
 // ------------------------------
 // Advertising intervals
 // ------------------------------
@@ -60,14 +52,14 @@ static const char* CHARACTERISTIC_UUID_LEFT  = "10480c36-db9c-476a-8ecf-129aa852
 bool BLE_Init(bool FlagSide);
 
 /**
- * @brief Sends a 39-byte message immediately via BLE (if connected).
- * @param msg A pointer to the 39-byte array to send
+ * @brief Sends a 43-byte message immediately via BLE (if connected).
+ * @param msg A pointer to the 43-byte array to send
  * @return true if successfully sent, false if not connected
  */
 bool BLE_SendBuffer(SensorData* sensor_msg);
 /**
  * @brief A unit test for the Bluetooth module. Initializes BLE
- *        (using "Insole Right" as an example) and sends a 39-byte test message.
+ *        (using "Insole Right" as an example) and sends a 43-byte test message.
  */
 void BLE_Test(void);
 

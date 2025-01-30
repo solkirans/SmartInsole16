@@ -22,6 +22,12 @@ static volatile uint8_t numSubscribers = 0;
 static unsigned long lastSuccessfulOperation   = 0;
 uint32_t lastCheck = 0;
 
+// Add at the top with other static variables
+static uint32_t lastTransmitTime = 0;
+
+// Add a flag to track transmission status
+static bool lastTransmissionSuccessful = true;
+
 
 
 class MyServerCallbacks: public NimBLEServerCallbacks {
@@ -101,8 +107,8 @@ bool BLE_Init(bool FlagSide)
     // (Optional) Set TX power for better range
     esp_ble_tx_power_set(ESP_BLE_PWR_TYPE_DEFAULT, BLE_TX_POWER);
 
-    // Set MTU to 50 bytes
-    NimBLEDevice::setMTU(50);
+    // Increase MTU size for better throughput
+    NimBLEDevice::setMTU(100);  // Increase MTU size to 100 bytes
 
     // 3. Create BLE Server & set callbacks
     pServer = NimBLEDevice::createServer();
@@ -166,7 +172,7 @@ bool BLE_Init(bool FlagSide)
     
     // Configure scan response data
     NimBLEAdvertisementData scanResponse;
-    advData.setCompleteServices(NimBLEUUID(serviceUUID));
+    scanResponse.setCompleteServices(NimBLEUUID(serviceUUID));
     uint8_t mfgData[] = {0x01, 0x02}; // Shortened manufacturer data
     scanResponse.setManufacturerData(mfgData, sizeof(mfgData));
 
@@ -177,6 +183,10 @@ bool BLE_Init(bool FlagSide)
     // Configure advertising parameters
     pAdvertising->setMinInterval(ADVERTISING_INTERVAL_MIN);
     pAdvertising->setMaxInterval(ADVERTISING_INTERVAL_MAX);
+
+    // Optionally, use preferred intervals if needed
+    // pAdvertising->setMinInterval(ADVERTISING_INTERVAL_MIN_PREFERRED);
+    // pAdvertising->setMaxInterval(ADVERTISING_INTERVAL_MAX_PREFERRED);
 
     // Start advertising
     pAdvertising->start();
@@ -189,78 +199,68 @@ bool BLE_Init(bool FlagSide)
 }
 
 bool processAndTransmitSensorData(const SensorData* data) {
-  // 1. Create individual 2-byte arrays for each multi-byte field
-  uint8_t battery_arr[1] = {data->battery}; // 1 byte
+   static TickType_t lastTransmitTick = 0;
+   TickType_t currentTick = xTaskGetTickCount();
+   
+   // Convert ms to ticks for comparison
+   const TickType_t minIntervalTicks = pdMS_TO_TICKS(BLE_TX_INTERVAL_MS);
+   
+   if ((currentTick - lastTransmitTick) < minIntervalTicks) {
+     return false;
+   }
 
-  uint8_t accel_x_arr[2];
-  memcpy(accel_x_arr, &data->accel_x, sizeof(data->accel_x));
+   // Create buffer with exact size of SensorData
+   uint8_t final_buffer[sizeof(SensorData)];
+   int offset = 0;
 
-  uint8_t accel_y_arr[2];
-  memcpy(accel_y_arr, &data->accel_y, sizeof(data->accel_y));
+   // Copy each field explicitly in the order defined in the struct
+   // 1. Timestamp (4 bytes)
+   memcpy(final_buffer + offset, &data->timestamp, sizeof(uint32_t));
+   offset += sizeof(uint32_t);
 
-  uint8_t accel_z_arr[2];
-  memcpy(accel_z_arr, &data->accel_z, sizeof(data->accel_z));
+   // 2. Battery (1 byte)
+   final_buffer[offset] = data->battery;
+   offset += sizeof(uint8_t);
 
-  uint8_t pressure_arr[16][2]; // 16 pressure values × 2 bytes
-  for(int i=0; i<16; i++) {
-    memcpy(pressure_arr[i], &data->pressure[i], sizeof(uint16_t));
-  }
+   // 3. Accelerometer X (2 bytes)
+   memcpy(final_buffer + offset, &data->accel_x, sizeof(int16_t));
+   offset += sizeof(int16_t);
 
+   // 4. Accelerometer Y (2 bytes)
+   memcpy(final_buffer + offset, &data->accel_y, sizeof(int16_t));
+   offset += sizeof(int16_t);
 
+   // 5. Accelerometer Z (2 bytes)
+   memcpy(final_buffer + offset, &data->accel_z, sizeof(int16_t));
+   offset += sizeof(int16_t);
 
-  // 3. Concatenate all arrays into one buffer
-  uint8_t final_buffer[39];
-  int offset = 0;
+   // 6. Pressure array
+   memcpy(final_buffer + offset, data->pressure, sizeof(data->pressure));
+   offset += sizeof(data->pressure);
 
-  // Battery (1 byte)
-  memcpy(final_buffer + offset, battery_arr, 1);
-  offset += 1;
+   // Verify total size matches struct size
+   if (offset != sizeof(SensorData)) {
+       LOG_ERROR("Buffer size mismatch: %d != %d", offset, sizeof(SensorData));
+       return false;
+   }
 
-  // Accelerations (2 bytes each)
-  memcpy(final_buffer + offset, accel_x_arr, 2);
-  offset += 2;
-  memcpy(final_buffer + offset, accel_y_arr, 2);
-  offset += 2;
-  memcpy(final_buffer + offset, accel_z_arr, 2);
-  offset += 2;
-
-  // Pressures (2 bytes each)
-  for(int i=0; i<16; i++) {
-    memcpy(final_buffer + offset, pressure_arr[i], 2);
-    offset += 2;
-  }
-
-  // 4. Print concatenated buffer
-  char hex_str[3*39 + 1] = {0};
-  for(int i=0; i<39; i++) {
-    snprintf(hex_str + strlen(hex_str), sizeof(hex_str) - strlen(hex_str), "%02X ", final_buffer[i]);
-  }
-    if (LOG_LEVEL_SELECTED >= LOGGER_LEVEL_DEBUG)
-    {
-        // 2. Print individual components
-        LOG_DEBUG("Battery: %02X", battery_arr[0]);
-
-        LOG_DEBUG("Accel X: %02X %02X", accel_x_arr[0], accel_x_arr[1]);
-        LOG_DEBUG("Accel Y: %02X %02X", accel_y_arr[0], accel_y_arr[1]);
-        LOG_DEBUG("Accel Z: %02X %02X", accel_z_arr[0], accel_z_arr[1]);
-
-        for(int i=0; i<16; i++) {
-            LOG_DEBUG("Pressure[%d]: %02X %02X", i, pressure_arr[i][0], pressure_arr[i][1]);
-        }
-        LOG_DEBUG("Concatenated Buffer: %s", hex_str);
-    }
-
-
-  // 5. Transmit via BLE
-  pTxCharacteristic->setValue(final_buffer, 39);
-  return pTxCharacteristic->notify();
+   // Set the value and notify
+   pTxCharacteristic->setValue(final_buffer, sizeof(SensorData));
+   bool success = pTxCharacteristic->notify();
+   
+   if (success) {
+     lastTransmitTick = currentTick;
+     esp_task_wdt_reset();
+   }
+   return success;
 }
 
 bool BLE_SendBuffer(SensorData* sensor_msg)
 {
-// Try to send all buffered data
+    // Try to send all buffered data
     bool anySent = false;
     LOG_DEBUG("Num of Subcribers: %d", numSubscribers);
+    
     if (!pTxCharacteristic || !pServer) {
         LOG_ERROR("BLE characteristic/server not initialized");
         return false;
@@ -272,18 +272,22 @@ bool BLE_SendBuffer(SensorData* sensor_msg)
         return false;
     }
 
+    // Discard data if BLE is not ready
+    if (!bleConnected || numSubscribers == 0) {
+        LOG_WARN("BLE not ready, discarding data");
+        return false;
+    }
 
-    // 3. Send the buffer via BLE
+    // Send the buffer via BLE
     bool success = processAndTransmitSensorData(sensor_msg);
     
     if (success) {
         lastSuccessfulOperation = millis();  // Update watchdog timer
         anySent = true;
-    } else {
-        LOG_WARN("BLE_SendByteArray: failed to notify");
-        // If send fails, break the loop
+        esp_task_wdt_reset();  // Reset watchdog after successful send
     }
-  return anySent;
+    
+    return anySent;
 }
 
 // Modified BLE_Test to demonstrate buffer functionality
